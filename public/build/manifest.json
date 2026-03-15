@@ -1,0 +1,67 @@
+{
+  "_ShoppingBagIcon-a15788d6.js": {
+    "file": "assets/ShoppingBagIcon-a15788d6.js",
+    "imports": [
+      "_client-43bce6b6.js"
+    ]
+  },
+  "_SparklesIcon-8a3244c5.js": {
+    "file": "assets/SparklesIcon-8a3244c5.js",
+    "imports": [
+      "_client-43bce6b6.js"
+    ]
+  },
+  "_client-43bce6b6.js": {
+    "file": "assets/client-43bce6b6.js"
+  },
+  "_clsx-ef1c03d3.js": {
+    "file": "assets/clsx-ef1c03d3.js",
+    "imports": [
+      "_client-43bce6b6.js"
+    ]
+  },
+  "resources/css/app.css": {
+    "file": "assets/app-678619a3.css",
+    "isEntry": true,
+    "src": "resources/css/app.css"
+  },
+  "resources/js/admin.jsx": {
+    "file": "assets/admin-37f69eca.js",
+    "imports": [
+      "_client-43bce6b6.js",
+      "_clsx-ef1c03d3.js",
+      "_ShoppingBagIcon-a15788d6.js",
+      "_SparklesIcon-8a3244c5.js"
+    ],
+    "isEntry": true,
+    "src": "resources/js/admin.jsx"
+  },
+  "resources/js/app.jsx": {
+    "file": "assets/app-d9455800.js",
+    "imports": [
+      "_client-43bce6b6.js"
+    ],
+    "isEntry": true,
+    "src": "resources/js/app.jsx"
+  },
+  "resources/js/developer.jsx": {
+    "file": "assets/developer-3e432a68.js",
+    "imports": [
+      "_client-43bce6b6.js",
+      "_clsx-ef1c03d3.js",
+      "_SparklesIcon-8a3244c5.js"
+    ],
+    "isEntry": true,
+    "src": "resources/js/developer.jsx"
+  },
+  "resources/js/staff.jsx": {
+    "file": "assets/staff-3b764d51.js",
+    "imports": [
+      "_client-43bce6b6.js",
+      "_clsx-ef1c03d3.js",
+      "_ShoppingBagIcon-a15788d6.js"
+    ],
+    "isEntry": true,
+    "src": "resources/js/staff.jsx"
+  }
+}

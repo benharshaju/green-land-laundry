@@ -15,4 +15,4 @@ yarn-error.log
 /.fleet
 /.idea
 /.vscode
-/public/build
+# /public/build  # Included for Hostinger shared hosting (no npm on server)
