@@ -34,6 +34,13 @@ if [ ! -d "node_modules/stripe" ]; then
 fi
 claude mcp add stripe -- node "$(pwd)/mcp-servers/stripe-server.js"
 
+echo "  [7/7] Email server (SendGrid / SMTP)"
+if [ ! -d "node_modules/@sendgrid" ]; then
+  echo "    Installing SendGrid and Nodemailer..."
+  npm install --save @sendgrid/mail nodemailer
+fi
+claude mcp add email -- node "$(pwd)/mcp-servers/email-server.js"
+
 echo ""
 echo "All MCP servers installed."
 echo ""
@@ -44,3 +51,5 @@ echo "  BRAVE_API_KEY       — Brave Search API key"
 echo "  TWILIO_SID          — Twilio Account SID"
 echo "  TWILIO_TOKEN        — Twilio Auth Token"
 echo "  STRIPE_SECRET_KEY   — Stripe secret key (sk_test_... or sk_live_...)"
+echo "  SENDGRID_API_KEY    — SendGrid API key (or use SMTP_* vars instead)"
+echo "  EMAIL_FROM          — Default sender address"

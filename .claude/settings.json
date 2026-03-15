@@ -56,6 +56,18 @@
         "STRIPE_SECRET_KEY": "${STRIPE_SECRET_KEY}",
         "STRIPE_SERVER_PORT": "3002"
       }
+    },
+    "email": {
+      "command": "node",
+      "args": ["mcp-servers/email-server.js"],
+      "env": {
+        "SENDGRID_API_KEY": "${SENDGRID_API_KEY}",
+        "SMTP_HOST": "${SMTP_HOST}",
+        "SMTP_PORT": "${SMTP_PORT}",
+        "SMTP_USER": "${SMTP_USER}",
+        "SMTP_PASS": "${SMTP_PASS}",
+        "EMAIL_FROM": "${EMAIL_FROM}"
+      }
     }
   }
 }

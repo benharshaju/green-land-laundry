@@ -35,8 +35,12 @@ run_test "devops-engineer.md exists"     "test -f .claude/agents/devops-engineer
 run_test "settings.json exists"          "test -f .claude/settings.json"
 run_test "track-performance.js exists"   "test -f scripts/track-performance.js"
 run_test "inject-knowledge.js exists"    "test -f scripts/inject-knowledge.js"
-run_test "phone-server.js exists"        "test -f mcp-servers/phone-server.js"
-run_test "stripe-server.js exists"       "test -f mcp-servers/stripe-server.js"
+run_test "phone-server.js exists"                    "test -f mcp-servers/phone-server.js"
+run_test "stripe-server.js exists"                   "test -f mcp-servers/stripe-server.js"
+run_test "email-server.js exists"                    "test -f mcp-servers/email-server.js"
+run_test "web-scraper.md exists"                     "test -f .claude/agents/web-scraper.md"
+run_test "database-migration.md exists"              "test -f .claude/agents/database-migration.md"
+run_test "code-reviewer.md exists"                   "test -f .claude/agents/code-reviewer.md"
 
 # ── JSON validation ────────────────────────────────────────────────────────
 echo ""
@@ -59,6 +63,8 @@ run_test "phone-server.js syntax OK" \
   "node --check mcp-servers/phone-server.js"
 run_test "stripe-server.js syntax OK" \
   "node --check mcp-servers/stripe-server.js"
+run_test "email-server.js syntax OK" \
+  "node --check mcp-servers/email-server.js"
 
 # ── Performance tracker functional test ───────────────────────────────────
 echo ""

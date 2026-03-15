@@ -46,6 +46,7 @@ MCP servers provide:
 - `brave` — web search
 - `phone` — Twilio-powered calling
 - `stripe` — payment processing
+- `email` — SendGrid/SMTP email (send_email, send_bulk_email, send_template_email)
 
 ### 5. Enterprise-Grade Quality Controls
 Every generated production artifact passes through:
@@ -82,6 +83,13 @@ Execution:
 4. CRM agent updates records with call outcomes
 5. Reporting agent generates summary of collections
 ```
+
+### 6. Additional Subagents
+| Agent | Trigger | Capability |
+|-------|---------|------------|
+| `web-scraper` | "scrape", "extract data", "crawl" | Extracts structured JSON/CSV from any URL; respects robots.txt |
+| `database-migration` | "migrate", "add column", "schema change" | Safe up/down migrations for Laravel, Drizzle, Prisma, Alembic, raw SQL |
+| `code-reviewer` | "review", "PR review", "audit code" | 5-pass review (correctness, security, performance, maintainability, tests) |
 
 ## Rollout Phases
 - **Phase 1** (Day 1): Multi-model routing + full-stack generation

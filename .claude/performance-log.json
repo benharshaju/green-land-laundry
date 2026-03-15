@@ -12,5 +12,12 @@
     "success": true,
     "exitCode": 0,
     "file": "/tmp/test.js"
+  },
+  {
+    "timestamp": "2026-03-15T09:39:10.985Z",
+    "tool": "TestTool",
+    "success": true,
+    "exitCode": 0,
+    "file": "/tmp/test.js"
   }
 ]
