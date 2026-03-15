@@ -1,0 +1,61 @@
+{
+  "hooks": {
+    "post-tool-use": [
+      {
+        "matcher": ".*",
+        "command": "node scripts/track-performance.js \"$TOOL_NAME\" \"$EXIT_CODE\" \"$FILE_PATH\""
+      }
+    ],
+    "user-prompt-submit": [
+      {
+        "matcher": ".*",
+        "command": "node scripts/inject-knowledge.js"
+      }
+    ]
+  },
+  "mcp_servers": {
+    "github": {
+      "command": "npx",
+      "args": ["@anthropic/mcp-server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["@anthropic/mcp-server-postgres"],
+      "env": {
+        "DATABASE_URL": "${DATABASE_URL}"
+      }
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["@anthropic/mcp-server-filesystem", "."],
+      "env": {}
+    },
+    "brave": {
+      "command": "npx",
+      "args": ["@anthropic/mcp-server-brave"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      }
+    },
+    "phone": {
+      "command": "node",
+      "args": ["mcp-servers/phone-server.js"],
+      "env": {
+        "TWILIO_SID": "${TWILIO_SID}",
+        "TWILIO_TOKEN": "${TWILIO_TOKEN}",
+        "PHONE_SERVER_PORT": "3001"
+      }
+    },
+    "stripe": {
+      "command": "node",
+      "args": ["mcp-servers/stripe-server.js"],
+      "env": {
+        "STRIPE_SECRET_KEY": "${STRIPE_SECRET_KEY}",
+        "STRIPE_SERVER_PORT": "3002"
+      }
+    }
+  }
+}

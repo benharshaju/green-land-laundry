@@ -1,0 +1,42 @@
+{
+  "model_routing": {
+    "strategy": "dynamic_task_analysis",
+    "models": {
+      "claude-opus": ["architecture", "complex_reasoning", "planning"],
+      "claude-sonnet": ["coding", "refactoring", "implementation"],
+      "gpt-4": ["creative", "content_generation"],
+      "gemini-pro": ["multimodal", "research"]
+    },
+    "judge_agent": {
+      "model": "claude-opus",
+      "evaluation_criteria": ["correctness", "efficiency", "style_match"]
+    }
+  },
+  "parallel_execution": {
+    "max_concurrent": 10,
+    "coordination": "main_agent_supervisor"
+  },
+  "fallback_chain": [
+    "claude-opus",
+    "claude-sonnet",
+    "claude-haiku"
+  ],
+  "task_routing_rules": [
+    {
+      "keywords": ["architect", "design", "plan", "structure", "schema"],
+      "preferred_model": "claude-opus"
+    },
+    {
+      "keywords": ["code", "implement", "refactor", "fix", "debug"],
+      "preferred_model": "claude-sonnet"
+    },
+    {
+      "keywords": ["write", "content", "copy", "marketing", "blog"],
+      "preferred_model": "gpt-4"
+    },
+    {
+      "keywords": ["image", "vision", "analyze", "research", "search"],
+      "preferred_model": "gemini-pro"
+    }
+  ]
+}

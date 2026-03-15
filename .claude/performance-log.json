@@ -1,0 +1,9 @@
+[
+  {
+    "timestamp": "2026-03-15T09:25:31.017Z",
+    "tool": "TestTool",
+    "success": true,
+    "exitCode": 0,
+    "file": "/tmp/test.js"
+  }
+]
