@@ -1,0 +1,83 @@
+name: Deploy to VPS (masterkuttu.space)
+
+on:
+  push:
+    branches:
+      - claude/connect-remote-control-cfpwb
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP 8.2
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, xml, curl, zip, gd, intl, bcmath, mysql
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install & build frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to VPS via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            cd /var/www/green-land-laundry
+
+            # Pull latest code
+            git fetch origin ${{ github.ref_name }}
+            git checkout ${{ github.ref_name }}
+            git pull origin ${{ github.ref_name }}
+
+            # Install PHP deps
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+            # Install & build frontend
+            npm ci
+            npm run build
+
+            # Laravel production commands
+            php artisan migrate --force
+            php artisan config:cache
+            php artisan route:cache
+            php artisan view:cache
+            php artisan storage:link 2>/dev/null || true
+
+            # Restart services
+            sudo systemctl restart php8.2-fpm
+            sudo supervisorctl restart greenland-worker:*
+
+            echo "Deployment complete!"
+
+      - name: Verify deployment
+        run: |
+          sleep 10
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://masterkuttu.space)
+          if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 302 ]; then
+            echo "✅ Site is live! Status: $STATUS"
+          else
+            echo "⚠️ Site returned status: $STATUS (may still be booting)"
+          fi
