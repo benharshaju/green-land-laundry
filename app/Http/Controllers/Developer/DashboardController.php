@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Developer;
 use App\Http\Controllers\Controller;
 use App\Services\AiImageService;
 use App\Services\N8nService;
+use App\Services\N8nWorkflowTemplates;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
@@ -102,11 +103,19 @@ class DashboardController extends Controller
 
     public function n8nWorkflows()
     {
-        $health = $this->n8n->healthCheck();
-        $workflows = config('n8n.workflows', []);
+        $health     = $this->n8n->healthCheck();
+        $workflows  = config('n8n.workflows', []);
         $webhookUrl = config('n8n.webhook_url');
+        $categories = N8nWorkflowTemplates::categories();
+        $templates  = N8nWorkflowTemplates::all();
 
-        return view('developer.n8n', compact('health', 'workflows', 'webhookUrl'));
+        // Strip n8n_json from the list view for performance (sent via separate endpoint)
+        $templatesForView = array_map(function ($t) {
+            unset($t['n8n_json']);
+            return $t;
+        }, $templates);
+
+        return view('developer.n8n', compact('health', 'workflows', 'webhookUrl', 'categories', 'templatesForView'));
     }
 
     public function n8nTest(Request $request)
@@ -122,6 +131,22 @@ class DashboardController extends Controller
         }
 
         return back()->with('error', "n8n health check failed: {$health['message']}");
+    }
+
+    /**
+     * Download a pre-built workflow template as importable n8n JSON.
+     */
+    public function n8nTemplateDownload(string $templateId)
+    {
+        $template = N8nWorkflowTemplates::find($templateId);
+
+        if (!$template) {
+            return response()->json(['error' => 'Template not found'], 404);
+        }
+
+        return response()->json($template['n8n_json'], 200, [
+            'Content-Disposition' => 'attachment; filename="' . $template['id'] . '.json"',
+        ]);
     }
 
     private function getDatabaseSize(): string

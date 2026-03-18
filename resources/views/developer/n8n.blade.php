@@ -16,6 +16,8 @@
             health: @json($health),
             workflows: @json($workflows),
             webhookUrl: @json($webhookUrl),
+            categories: @json($categories),
+            templates: @json($templatesForView),
         };
     </script>
     @vite(['resources/js/developer-n8n.jsx'])

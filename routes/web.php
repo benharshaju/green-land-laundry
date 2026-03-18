@@ -87,4 +87,5 @@ Route::prefix('developer')->name('developer.')->middleware(['auth', 'role:develo
     Route::post('/ai-images/generate', [DevDashboard::class, 'generateAiImage'])->name('ai-images.generate');
     Route::get('/n8n', [DevDashboard::class, 'n8nWorkflows'])->name('n8n');
     Route::post('/n8n/test', [DevDashboard::class, 'n8nTest'])->name('n8n.test');
+    Route::get('/n8n/templates/{templateId}/download', [DevDashboard::class, 'n8nTemplateDownload'])->name('n8n.template.download');
 });
