@@ -3,7 +3,7 @@
         'name' => 'greenland/laundry',
         'pretty_version' => 'dev-master',
         'version' => 'dev-master',
-        'reference' => 'de430f27db655362ba4db5ef343473e470bf6afc',
+        'reference' => '3a2de3ab7deaff226ecdacb277363712f3489321',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -139,7 +139,7 @@
         'greenland/laundry' => array(
             'pretty_version' => 'dev-master',
             'version' => 'dev-master',
-            'reference' => 'de430f27db655362ba4db5ef343473e470bf6afc',
+            'reference' => '3a2de3ab7deaff226ecdacb277363712f3489321',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
