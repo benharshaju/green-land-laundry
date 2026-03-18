@@ -100,6 +100,11 @@ class Order extends Model
         return $this->hasOne(Invoice::class);
     }
 
+    public function machines()
+    {
+        return $this->hasMany(Machine::class, 'current_order_id');
+    }
+
     public function calculateTotals(): void
     {
         $subtotal = $this->items->sum(fn($item) => $item->quantity * $item->unit_price);

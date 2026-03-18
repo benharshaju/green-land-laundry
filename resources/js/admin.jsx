@@ -10,6 +10,7 @@ import Customers from './pages/Admin/Customers';
 import Services from './pages/Admin/Services';
 import Invoices from './pages/Admin/Invoices';
 import Reports from './pages/Admin/Reports';
+import Machines from './pages/Admin/Machines';
 
 const AdminApp = () => (
     <BrowserRouter basename="/admin">
@@ -23,6 +24,7 @@ const AdminApp = () => (
                 <Route path="/services" element={<Services />} />
                 <Route path="/invoices" element={<Invoices />} />
                 <Route path="/reports" element={<Reports />} />
+                <Route path="/machines" element={<Machines />} />
             </Routes>
         </AdminLayout>
     </BrowserRouter>

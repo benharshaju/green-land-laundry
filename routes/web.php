@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\ServiceController;
 use App\Http\Controllers\Admin\InvoiceController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\MachineController;
 use App\Http\Controllers\Staff\OrderController as StaffOrderController;
 use App\Http\Controllers\Auth\LoginController;
 
@@ -54,6 +55,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'role:admin|super-ad
     Route::get('/reports/revenue', [ReportController::class, 'revenue'])->name('reports.revenue');
     Route::get('/reports/orders', [ReportController::class, 'orders'])->name('reports.orders');
     Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+
+    // Machines — Remote Control
+    Route::get('/machines', [MachineController::class, 'index'])->name('machines.index');
+    Route::post('/machines', [MachineController::class, 'store'])->name('machines.store');
+    Route::put('/machines/{machine}', [MachineController::class, 'update'])->name('machines.update');
+    Route::delete('/machines/{machine}', [MachineController::class, 'destroy'])->name('machines.destroy');
+    Route::post('/machines/{machine}/command', [MachineController::class, 'command'])->name('machines.command');
+    Route::get('/machines/status', [MachineController::class, 'statusAll'])->name('machines.status.all');
+    Route::get('/machines/{machine}/status', [MachineController::class, 'status'])->name('machines.status');
 
     // Settings
     Route::get('/settings', [SettingsController::class, 'index'])->name('settings.index');

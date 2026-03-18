@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
     HomeIcon, ShoppingBagIcon, UsersIcon, SparklesIcon,
     DocumentTextIcon, ChartBarIcon, Cog6ToothIcon,
-    Bars3Icon, XMarkIcon, BellIcon,
+    Bars3Icon, XMarkIcon, BellIcon, CpuChipIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 
@@ -13,6 +13,7 @@ const navigation = [
     { name: 'Customers',  href: '/customers',   icon: UsersIcon },
     { name: 'Services',   href: '/services',    icon: SparklesIcon },
     { name: 'Invoices',   href: '/invoices',    icon: DocumentTextIcon },
+    { name: 'Machines',   href: '/machines',    icon: CpuChipIcon },
     { name: 'Reports',    href: '/reports',     icon: ChartBarIcon },
     { name: 'Settings',   href: '/settings',    icon: Cog6ToothIcon },
 ];
