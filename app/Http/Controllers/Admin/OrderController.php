@@ -7,11 +7,15 @@ use App\Models\Order;
 use App\Models\Customer;
 use App\Models\Service;
 use App\Services\WhatsAppService;
+use App\Services\N8nService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
-    public function __construct(private WhatsAppService $whatsApp) {}
+    public function __construct(
+        private WhatsAppService $whatsApp,
+        private N8nService $n8n,
+    ) {}
 
     public function index(Request $request)
     {
@@ -73,6 +77,9 @@ class OrderController extends Controller
         $this->whatsApp->sendOrderConfirmation($order);
         $order->update(['whatsapp_sent_at' => now()]);
 
+        // Trigger n8n workflow
+        $this->n8n->triggerOrderCreated($order);
+
         return redirect()->route('admin.orders.show', $order)
             ->with('success', "Order #{$order->order_number} created successfully.");
     }
@@ -111,6 +118,7 @@ class OrderController extends Controller
             'status' => 'required|in:' . implode(',', Order::STATUSES),
         ]);
 
+        $previousStatus = $order->status;
         $order->update(['status' => $request->status]);
 
         // Send WhatsApp notification for status change
@@ -118,6 +126,13 @@ class OrderController extends Controller
 
         if ($order->status === Order::STATUS_READY) {
             $this->whatsApp->sendReadyForPickup($order);
+        }
+
+        // Trigger n8n workflows
+        $this->n8n->triggerOrderStatusChanged($order, $previousStatus);
+
+        if ($order->status === Order::STATUS_DELIVERED) {
+            $this->n8n->triggerOrderCompleted($order);
         }
 
         return back()->with('success', 'Order status updated.');

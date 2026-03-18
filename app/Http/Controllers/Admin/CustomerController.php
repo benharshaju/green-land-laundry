@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Customer;
+use App\Services\N8nService;
 use Illuminate\Http\Request;
 
 class CustomerController extends Controller
 {
+    public function __construct(private N8nService $n8n) {}
     public function index(Request $request)
     {
         $customers = Customer::withCount('orders')
@@ -42,6 +44,9 @@ class CustomerController extends Controller
         ]);
 
         $customer = Customer::create($validated);
+
+        // Trigger n8n workflow
+        $this->n8n->triggerCustomerCreated($customer);
 
         return redirect()->route('admin.customers.show', $customer)
             ->with('success', "Customer {$customer->name} created.");

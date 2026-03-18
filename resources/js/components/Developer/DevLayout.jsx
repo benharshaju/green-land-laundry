@@ -1,13 +1,14 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-    HomeIcon, ServerIcon, SparklesIcon, DocumentTextIcon, KeyIcon,
+    HomeIcon, ServerIcon, SparklesIcon, DocumentTextIcon, KeyIcon, BoltIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 
 const nav = [
     { name: 'Dashboard',     href: '/dashboard',     icon: HomeIcon },
     { name: 'System Health', href: '/system-health',  icon: ServerIcon },
+    { name: 'n8n Workflows', href: '/n8n',            icon: BoltIcon },
     { name: 'AI Images',     href: '/ai-images',      icon: SparklesIcon },
     { name: 'Logs',          href: '/logs',            icon: DocumentTextIcon },
     { name: 'API Keys',      href: '/api-keys',        icon: KeyIcon },

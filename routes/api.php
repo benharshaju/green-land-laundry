@@ -22,6 +22,7 @@ Route::prefix('v1')->group(function () {
     // Webhook endpoints (no auth required)
     Route::post('/webhooks/whatsapp', [WebhookController::class, 'whatsapp'])->name('webhooks.whatsapp');
     Route::post('/webhooks/payment', [WebhookController::class, 'payment'])->name('webhooks.payment');
+    Route::post('/webhooks/n8n', [WebhookController::class, 'n8n'])->name('webhooks.n8n');
 
     // Authenticated API routes
     Route::middleware('auth:sanctum')->group(function () {

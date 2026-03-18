@@ -4,13 +4,17 @@ namespace App\Http\Controllers\Developer;
 
 use App\Http\Controllers\Controller;
 use App\Services\AiImageService;
+use App\Services\N8nService;
 use App\Models\Service;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
 class DashboardController extends Controller
 {
-    public function __construct(private AiImageService $aiImage) {}
+    public function __construct(
+        private AiImageService $aiImage,
+        private N8nService $n8n,
+    ) {}
 
     public function index()
     {
@@ -66,6 +70,7 @@ class DashboardController extends Controller
             'storage'    => $this->checkStorage(),
             'whatsapp'   => $this->checkWhatsApp(),
             'openai'     => $this->checkOpenAI(),
+            'n8n'        => $this->n8n->healthCheck(),
             'queue'      => $this->checkQueue(),
         ];
 
@@ -93,6 +98,30 @@ class DashboardController extends Controller
         }
 
         return back()->with('error', 'Failed to generate AI image. Check OpenAI configuration.');
+    }
+
+    public function n8nWorkflows()
+    {
+        $health = $this->n8n->healthCheck();
+        $workflows = config('n8n.workflows', []);
+        $webhookUrl = config('n8n.webhook_url');
+
+        return view('developer.n8n', compact('health', 'workflows', 'webhookUrl'));
+    }
+
+    public function n8nTest(Request $request)
+    {
+        $request->validate([
+            'workflow' => 'required|string',
+        ]);
+
+        $health = $this->n8n->healthCheck();
+
+        if ($health['status'] === 'ok') {
+            return back()->with('success', 'n8n connection is healthy. Workflows are ready to trigger.');
+        }
+
+        return back()->with('error', "n8n health check failed: {$health['message']}");
     }
 
     private function getDatabaseSize(): string

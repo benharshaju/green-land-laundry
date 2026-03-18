@@ -6,6 +6,7 @@ import DevLayout from './components/Developer/DevLayout';
 import DevDashboard from './pages/Developer/Dashboard';
 import SystemHealth from './pages/Developer/SystemHealth';
 import AiImages from './pages/Developer/AiImages';
+import N8nWorkflows from './pages/Developer/N8nWorkflows';
 import Logs from './pages/Developer/Logs';
 
 const DevApp = () => (
@@ -14,6 +15,7 @@ const DevApp = () => (
             <Routes>
                 <Route path="/dashboard" element={<DevDashboard />} />
                 <Route path="/system-health" element={<SystemHealth />} />
+                <Route path="/n8n" element={<N8nWorkflows />} />
                 <Route path="/ai-images" element={<AiImages />} />
                 <Route path="/logs" element={<Logs />} />
             </Routes>

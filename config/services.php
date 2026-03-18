@@ -24,4 +24,13 @@ return [
         'token'          => env('TWILIO_AUTH_TOKEN'),
         'whatsapp_from'  => env('TWILIO_WHATSAPP_FROM', 'whatsapp:+14155238886'),
     ],
+
+    // n8n Workflow Automation
+    'n8n' => [
+        'api_key'        => env('N8N_API_KEY'),
+        'base_url'       => env('N8N_BASE_URL', 'https://greenlandlaundry.app.n8n.cloud'),
+        'webhook_url'    => env('N8N_WEBHOOK_URL', 'https://greenlandlaundry.app.n8n.cloud/webhook'),
+        'webhook_secret' => env('N8N_WEBHOOK_SECRET'),
+        'enabled'        => env('N8N_ENABLED', true),
+    ],
 ];

@@ -11,6 +11,7 @@ export default defineConfig({
                 'resources/js/admin.jsx',
                 'resources/js/staff.jsx',
                 'resources/js/developer.jsx',
+                'resources/js/developer-n8n.jsx',
             ],
             refresh: true,
         }),
