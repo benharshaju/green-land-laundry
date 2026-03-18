@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
     CpuChipIcon, PlayIcon, StopIcon, PauseIcon,
     ArrowPathIcon, PlusIcon, WrenchScrewdriverIcon,
-    SignalIcon, ExclamationTriangleIcon,
+    SignalIcon, ExclamationTriangleIcon, XMarkIcon,
 } from '@heroicons/react/24/outline';
 import clsx from 'clsx';
 
@@ -11,18 +11,23 @@ const activeOrders = window.machinesData?.activeOrders || [];
 
 const typeLabels = { washer: 'Washer', dryer: 'Dryer', ironer: 'Ironer' };
 const typeColors = {
-    washer: 'bg-blue-100 text-blue-700',
-    dryer:  'bg-orange-100 text-orange-700',
-    ironer: 'bg-purple-100 text-purple-700',
+    washer: 'from-blue-500 to-blue-600',
+    dryer:  'from-orange-500 to-orange-600',
+    ironer: 'from-violet-500 to-violet-600',
+};
+const typeBadge = {
+    washer: 'bg-blue-50 text-blue-700 border-blue-200/50',
+    dryer:  'bg-orange-50 text-orange-700 border-orange-200/50',
+    ironer: 'bg-violet-50 text-violet-700 border-violet-200/50',
 };
 
 const statusConfig = {
-    idle:        { color: 'bg-green-100 text-green-700',  dot: 'bg-green-500',  label: 'Idle' },
-    running:     { color: 'bg-blue-100 text-blue-700',    dot: 'bg-blue-500',   label: 'Running' },
-    paused:      { color: 'bg-yellow-100 text-yellow-700', dot: 'bg-yellow-500', label: 'Paused' },
-    error:       { color: 'bg-red-100 text-red-700',      dot: 'bg-red-500',    label: 'Error' },
-    offline:     { color: 'bg-gray-100 text-gray-500',    dot: 'bg-gray-400',   label: 'Offline' },
-    maintenance: { color: 'bg-amber-100 text-amber-700',  dot: 'bg-amber-500',  label: 'Maintenance' },
+    idle:        { color: 'bg-emerald-50 text-emerald-700 border-emerald-200/50',  dot: 'bg-emerald-500', label: 'Idle' },
+    running:     { color: 'bg-blue-50 text-blue-700 border-blue-200/50',           dot: 'bg-blue-500',    label: 'Running' },
+    paused:      { color: 'bg-amber-50 text-amber-700 border-amber-200/50',        dot: 'bg-amber-500',   label: 'Paused' },
+    error:       { color: 'bg-red-50 text-red-700 border-red-200/50',              dot: 'bg-red-500',     label: 'Error' },
+    offline:     { color: 'bg-gray-100 text-gray-500 border-gray-200/50',          dot: 'bg-gray-400',    label: 'Offline' },
+    maintenance: { color: 'bg-amber-50 text-amber-700 border-amber-200/50',        dot: 'bg-amber-500',   label: 'Maintenance' },
 };
 
 const defaultPrograms = {
@@ -57,18 +62,24 @@ function ProgressRing({ progress, size = 80, stroke = 6 }) {
         <svg width={size} height={size} className="transform -rotate-90">
             <circle
                 cx={size / 2} cy={size / 2} r={radius}
-                fill="none" stroke="#e5e7eb" strokeWidth={stroke}
+                fill="none" stroke="#f3f4f6" strokeWidth={stroke}
             />
             <circle
                 cx={size / 2} cy={size / 2} r={radius}
-                fill="none" stroke="#3b82f6" strokeWidth={stroke}
+                fill="none" stroke="url(#progressGradient)" strokeWidth={stroke}
                 strokeDasharray={circumference} strokeDashoffset={offset}
-                strokeLinecap="round" className="transition-all duration-1000"
+                strokeLinecap="round" className="transition-all duration-1000 ease-out"
             />
+            <defs>
+                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#1abb6b" />
+                </linearGradient>
+            </defs>
             <text
                 x={size / 2} y={size / 2}
                 textAnchor="middle" dominantBaseline="central"
-                className="fill-gray-700 font-bold"
+                className="fill-gray-700 font-extrabold"
                 fontSize="16" transform={`rotate(90, ${size / 2}, ${size / 2})`}
             >
                 {progress}%
@@ -98,56 +109,52 @@ function MachineCard({ machine, onCommand, onRefresh }) {
 
     return (
         <div className={clsx(
-            'bg-white rounded-xl shadow-sm border-2 p-5 transition-all',
-            isRunning ? 'border-blue-300 shadow-blue-100' :
-            machine.status === 'error' ? 'border-red-300 shadow-red-100' :
-            'border-gray-100'
+            'card p-5 transition-all duration-300',
+            isRunning && 'ring-2 ring-blue-200 shadow-glow-blue',
+            machine.status === 'error' && 'ring-2 ring-red-200 shadow-lg shadow-red-100',
         )}>
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                    <div className={clsx('p-2 rounded-lg', typeColors[machine.type])}>
-                        <CpuChipIcon className="w-6 h-6" />
+                <div className="flex items-center gap-3">
+                    <div className={clsx('w-10 h-10 rounded-xl bg-gradient-to-br flex items-center justify-center', typeColors[machine.type])}>
+                        <CpuChipIcon className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                        <h3 className="font-semibold text-gray-900">{machine.name}</h3>
-                        <p className="text-xs text-gray-500">
-                            {typeLabels[machine.type]} • {machine.machine_id}
-                            {machine.capacity_kg && ` • ${machine.capacity_kg}kg`}
+                        <h3 className="font-bold text-gray-900">{machine.name}</h3>
+                        <p className="text-xs text-gray-400">
+                            <span className={`badge text-[10px] px-1.5 py-0.5 border ${typeBadge[machine.type]}`}>
+                                {typeLabels[machine.type]}
+                            </span>
+                            <span className="ml-1.5">{machine.machine_id}</span>
+                            {machine.capacity_kg && <span> · {machine.capacity_kg}kg</span>}
                         </p>
                     </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                    <span className={clsx('inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium', status.color)}>
-                        <span className={clsx('w-1.5 h-1.5 rounded-full mr-1.5', status.dot,
-                            isRunning && 'animate-pulse'
-                        )} />
+                <div className="flex items-center gap-1.5">
+                    <span className={`badge border ${status.color}`}>
+                        <span className={clsx('badge-dot', status.dot, isRunning && 'animate-pulse')} />
                         {status.label}
                     </span>
-                    <button
-                        onClick={onRefresh}
-                        className="text-gray-400 hover:text-gray-600 p-1"
-                        title="Refresh status"
-                    >
-                        <ArrowPathIcon className="w-4 h-4" />
+                    <button onClick={onRefresh} className="btn-icon !p-1.5" title="Refresh status">
+                        <ArrowPathIcon className="w-3.5 h-3.5" />
                     </button>
                 </div>
             </div>
 
             {/* Running cycle info */}
             {(isRunning || isPaused) && (
-                <div className="mb-4 bg-blue-50 rounded-lg p-4">
+                <div className="mb-4 bg-gradient-to-r from-blue-50 to-sky-50 rounded-xl p-4 border border-blue-100/50">
                     <div className="flex items-center justify-between">
                         <div>
-                            <p className="text-sm font-medium text-blue-900">
+                            <p className="text-sm font-bold text-blue-900">
                                 {programs[machine.current_program]?.name || machine.current_program}
                             </p>
-                            <p className="text-xs text-blue-600 mt-1">
+                            <p className="text-xs text-blue-600 mt-1 font-medium">
                                 {machine.current_temperature && `${machine.current_temperature}°C`}
-                                {remaining !== null && remaining !== undefined && ` • ${remaining} min remaining`}
+                                {remaining !== null && remaining !== undefined && ` · ${remaining} min remaining`}
                             </p>
                             {machine.order && (
-                                <p className="text-xs text-blue-500 mt-1">
+                                <p className="text-xs text-blue-400 mt-1">
                                     Order: {machine.order.order_number} — {machine.order.customer}
                                 </p>
                             )}
@@ -159,11 +166,11 @@ function MachineCard({ machine, onCommand, onRefresh }) {
 
             {/* Error state */}
             {machine.status === 'error' && (
-                <div className="mb-4 bg-red-50 rounded-lg p-3 flex items-start space-x-2">
+                <div className="mb-4 bg-red-50 rounded-xl p-3.5 flex items-start gap-3 border border-red-100/50">
                     <ExclamationTriangleIcon className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                     <div>
-                        <p className="text-sm font-medium text-red-800">Machine Error</p>
-                        <p className="text-xs text-red-600">Check machine and reset to continue.</p>
+                        <p className="text-sm font-bold text-red-800">Machine Error</p>
+                        <p className="text-xs text-red-600 mt-0.5">Check machine and reset to continue.</p>
                     </div>
                 </div>
             )}
@@ -171,15 +178,14 @@ function MachineCard({ machine, onCommand, onRefresh }) {
             {/* Controls */}
             {isOnline && (
                 <div className="space-y-3">
-                    {/* Program selector - show when idle */}
                     {isIdle && (
                         <>
                             <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Program</label>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Program</label>
                                 <select
                                     value={selectedProgram}
                                     onChange={(e) => setSelectedProgram(e.target.value)}
-                                    className="w-full rounded-lg border-gray-300 text-sm focus:ring-green-500 focus:border-green-500"
+                                    className="input text-sm"
                                 >
                                     <option value="">Select program...</option>
                                     {Object.entries(programs).map(([key, prog]) => (
@@ -190,11 +196,11 @@ function MachineCard({ machine, onCommand, onRefresh }) {
                                 </select>
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-gray-600 mb-1">Link to Order (optional)</label>
+                                <label className="block text-xs font-semibold text-gray-600 mb-1.5">Link to Order (optional)</label>
                                 <select
                                     value={selectedOrder}
                                     onChange={(e) => setSelectedOrder(e.target.value)}
-                                    className="w-full rounded-lg border-gray-300 text-sm focus:ring-green-500 focus:border-green-500"
+                                    className="input text-sm"
                                 >
                                     <option value="">No order linked</option>
                                     {activeOrders.map((order) => (
@@ -208,14 +214,14 @@ function MachineCard({ machine, onCommand, onRefresh }) {
                     )}
 
                     {/* Action buttons */}
-                    <div className="flex space-x-2">
+                    <div className="flex gap-2">
                         {isIdle && (
                             <button
                                 onClick={() => handleCommand('start')}
                                 disabled={!selectedProgram || loading}
-                                className="flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="flex-1 btn-primary inline-flex items-center justify-center gap-1.5 disabled:opacity-40"
                             >
-                                <PlayIcon className="w-4 h-4 mr-1.5" />
+                                <PlayIcon className="w-4 h-4" />
                                 Start Cycle
                             </button>
                         )}
@@ -224,17 +230,19 @@ function MachineCard({ machine, onCommand, onRefresh }) {
                                 <button
                                     onClick={() => handleCommand('pause')}
                                     disabled={loading}
-                                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-yellow-500 text-white text-sm font-medium hover:bg-yellow-600 disabled:opacity-50 transition-colors"
+                                    className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl
+                                               bg-amber-500 text-white text-sm font-semibold hover:bg-amber-600
+                                               shadow-sm hover:shadow-md transition-all duration-200 disabled:opacity-40"
                                 >
-                                    <PauseIcon className="w-4 h-4 mr-1.5" />
+                                    <PauseIcon className="w-4 h-4" />
                                     Pause
                                 </button>
                                 <button
                                     onClick={() => handleCommand('stop')}
                                     disabled={loading}
-                                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50 transition-colors"
+                                    className="flex-1 btn-danger inline-flex items-center justify-center gap-1.5 disabled:opacity-40"
                                 >
-                                    <StopIcon className="w-4 h-4 mr-1.5" />
+                                    <StopIcon className="w-4 h-4" />
                                     Stop
                                 </button>
                             </>
@@ -244,17 +252,17 @@ function MachineCard({ machine, onCommand, onRefresh }) {
                                 <button
                                     onClick={() => handleCommand('resume')}
                                     disabled={loading}
-                                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-colors"
+                                    className="flex-1 btn-primary inline-flex items-center justify-center gap-1.5 disabled:opacity-40"
                                 >
-                                    <PlayIcon className="w-4 h-4 mr-1.5" />
+                                    <PlayIcon className="w-4 h-4" />
                                     Resume
                                 </button>
                                 <button
                                     onClick={() => handleCommand('stop')}
                                     disabled={loading}
-                                    className="flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-red-500 text-white text-sm font-medium hover:bg-red-600 disabled:opacity-50 transition-colors"
+                                    className="flex-1 btn-danger inline-flex items-center justify-center gap-1.5 disabled:opacity-40"
                                 >
-                                    <StopIcon className="w-4 h-4 mr-1.5" />
+                                    <StopIcon className="w-4 h-4" />
                                     Stop
                                 </button>
                             </>
@@ -263,9 +271,9 @@ function MachineCard({ machine, onCommand, onRefresh }) {
                             <button
                                 onClick={() => handleCommand('stop')}
                                 disabled={loading}
-                                className="flex-1 inline-flex items-center justify-center px-4 py-2.5 rounded-lg bg-gray-600 text-white text-sm font-medium hover:bg-gray-700 disabled:opacity-50 transition-colors"
+                                className="flex-1 btn-secondary inline-flex items-center justify-center gap-1.5 disabled:opacity-40"
                             >
-                                <WrenchScrewdriverIcon className="w-4 h-4 mr-1.5" />
+                                <WrenchScrewdriverIcon className="w-4 h-4" />
                                 Reset
                             </button>
                         )}
@@ -275,9 +283,9 @@ function MachineCard({ machine, onCommand, onRefresh }) {
 
             {/* Offline message */}
             {!isOnline && (
-                <div className="text-center py-4">
-                    <SignalIcon className="w-8 h-8 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-500">
+                <div className="text-center py-6">
+                    <SignalIcon className="w-10 h-10 text-gray-200 mx-auto mb-2" />
+                    <p className="text-sm font-medium text-gray-500">
                         {machine.status === 'maintenance' ? 'Under maintenance' : 'Machine offline'}
                     </p>
                     {machine.last_ping_at && (
@@ -295,62 +303,64 @@ function AddMachineModal({ show, onClose }) {
     if (!show) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-600 bg-opacity-50">
-            <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Add Machine</h3>
-                <form method="POST" action="/admin/machines" className="space-y-4">
-                    <input type="hidden" name="_token" value={window.csrf_token} />
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                        <input name="name" required className="w-full rounded-lg border-gray-300 text-sm" placeholder="e.g. Washer #1" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Machine ID</label>
-                        <input name="machine_id" required className="w-full rounded-lg border-gray-300 text-sm" placeholder="Serial number or hardware ID" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
-                            <select name="type" required className="w-full rounded-lg border-gray-300 text-sm">
-                                <option value="washer">Washer</option>
-                                <option value="dryer">Dryer</option>
-                                <option value="ironer">Ironer</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Capacity (kg)</label>
-                            <input name="capacity_kg" type="number" min="1" className="w-full rounded-lg border-gray-300 text-sm" />
-                        </div>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
-                        <input name="model_name" className="w-full rounded-lg border-gray-300 text-sm" placeholder="e.g. Samsung WF45R6100" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">API Endpoint (optional)</label>
-                        <input name="api_endpoint" type="url" className="w-full rounded-lg border-gray-300 text-sm" placeholder="https://device.example.com/api" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">API Key (optional)</label>
-                        <input name="api_key" type="password" className="w-full rounded-lg border-gray-300 text-sm" />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-                        <textarea name="notes" rows="2" className="w-full rounded-lg border-gray-300 text-sm" />
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-2">
-                        <button type="button" onClick={onClose} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">
-                            Cancel
-                        </button>
-                        <button type="submit" className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700">
-                            Add Machine
+        <>
+            <div className="overlay animate-fade-in" onClick={onClose} />
+            <div className="modal">
+                <div className="modal-card max-w-lg" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center justify-between mb-5">
+                        <h3 className="text-lg font-bold text-gray-900">Add Machine</h3>
+                        <button onClick={onClose} className="btn-icon">
+                            <XMarkIcon className="w-5 h-5" />
                         </button>
                     </div>
-                </form>
+                    <form method="POST" action="/admin/machines" className="space-y-4">
+                        <input type="hidden" name="_token" value={window.csrf_token} />
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Name</label>
+                            <input name="name" required className="input" placeholder="e.g. Washer #1" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Machine ID</label>
+                            <input name="machine_id" required className="input" placeholder="Serial number or hardware ID" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Type</label>
+                                <select name="type" required className="input">
+                                    <option value="washer">Washer</option>
+                                    <option value="dryer">Dryer</option>
+                                    <option value="ironer">Ironer</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Capacity (kg)</label>
+                                <input name="capacity_kg" type="number" min="1" className="input" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Model</label>
+                            <input name="model_name" className="input" placeholder="e.g. Samsung WF45R6100" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Endpoint (optional)</label>
+                            <input name="api_endpoint" type="url" className="input" placeholder="https://device.example.com/api" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">API Key (optional)</label>
+                            <input name="api_key" type="password" className="input" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Notes</label>
+                            <textarea name="notes" rows="2" className="input resize-none" />
+                        </div>
+                        <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">
+                            <button type="button" onClick={onClose} className="btn-ghost">Cancel</button>
+                            <button type="submit" className="btn-primary">Add Machine</button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
+        </>
     );
 }
 
@@ -359,19 +369,14 @@ export default function Machines() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [flash, setFlash] = useState(null);
 
-    // Auto-refresh machine status every 10 seconds
     const refreshAll = useCallback(async () => {
         try {
-            const res = await fetch('/admin/machines/status', {
-                headers: { 'Accept': 'application/json' },
-            });
+            const res = await fetch('/admin/machines/status', { headers: { 'Accept': 'application/json' } });
             if (res.ok) {
                 const data = await res.json();
                 setMachines(data);
             }
-        } catch (e) {
-            // Silent fail on refresh
-        }
+        } catch (e) { /* silent */ }
     }, []);
 
     useEffect(() => {
@@ -387,22 +392,15 @@ export default function Machines() {
             if (program) body.append('program', program);
             if (orderId) body.append('order_id', orderId);
 
-            const res = await fetch(`/admin/machines/${machineId}/command`, {
-                method: 'POST',
-                body,
-            });
-
-            // Refresh after command
+            const res = await fetch(`/admin/machines/${machineId}/command`, { method: 'POST', body });
             await refreshAll();
 
             if (res.redirected) {
-                // Server returned redirect with flash — just refresh
                 setFlash({ type: 'success', message: `Command '${command}' sent successfully.` });
             }
         } catch (e) {
             setFlash({ type: 'error', message: 'Failed to send command.' });
         }
-
         setTimeout(() => setFlash(null), 4000);
     };
 
@@ -417,24 +415,18 @@ export default function Machines() {
     return (
         <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 animate-fade-in">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Machine Remote Control</h1>
-                    <p className="text-gray-500 text-sm">Monitor and control laundry machines</p>
+                    <h1 className="page-title">Machine Remote Control</h1>
+                    <p className="page-subtitle">Monitor and control laundry machines in real-time</p>
                 </div>
-                <div className="flex items-center space-x-3">
-                    <button
-                        onClick={refreshAll}
-                        className="inline-flex items-center px-3 py-2 rounded-lg border border-gray-200 text-sm text-gray-600 hover:bg-gray-50"
-                    >
-                        <ArrowPathIcon className="w-4 h-4 mr-1.5" />
+                <div className="flex items-center gap-2">
+                    <button onClick={refreshAll} className="btn-secondary inline-flex items-center gap-1.5">
+                        <ArrowPathIcon className="w-4 h-4" />
                         Refresh
                     </button>
-                    <button
-                        onClick={() => setShowAddModal(true)}
-                        className="inline-flex items-center px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
-                    >
-                        <PlusIcon className="w-4 h-4 mr-1.5" />
+                    <button onClick={() => setShowAddModal(true)} className="btn-primary inline-flex items-center gap-1.5">
+                        <PlusIcon className="w-4 h-4" />
                         Add Machine
                     </button>
                 </div>
@@ -443,45 +435,47 @@ export default function Machines() {
             {/* Flash message */}
             {flash && (
                 <div className={clsx(
-                    'px-4 py-3 rounded-lg text-sm font-medium',
-                    flash.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                    'px-4 py-3 rounded-xl text-sm font-semibold animate-fade-in-down border',
+                    flash.type === 'success'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50'
+                        : 'bg-red-50 text-red-700 border-red-200/50'
                 )}>
                     {flash.message}
                 </div>
             )}
 
             {/* Summary stats */}
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 animate-fade-in-up stagger-1">
                 {[
-                    { label: 'Total', value: summary.total, cls: 'text-gray-700 bg-gray-50' },
-                    { label: 'Running', value: summary.running, cls: 'text-blue-700 bg-blue-50' },
-                    { label: 'Idle', value: summary.idle, cls: 'text-green-700 bg-green-50' },
-                    { label: 'Error', value: summary.error, cls: 'text-red-700 bg-red-50' },
-                    { label: 'Offline', value: summary.offline, cls: 'text-gray-500 bg-gray-50' },
+                    { label: 'Total', value: summary.total, gradient: 'from-gray-500 to-gray-600' },
+                    { label: 'Running', value: summary.running, gradient: 'from-blue-500 to-blue-600' },
+                    { label: 'Idle', value: summary.idle, gradient: 'from-emerald-500 to-teal-600' },
+                    { label: 'Error', value: summary.error, gradient: 'from-red-500 to-red-600' },
+                    { label: 'Offline', value: summary.offline, gradient: 'from-gray-400 to-gray-500' },
                 ].map((s) => (
-                    <div key={s.label} className={clsx('rounded-lg px-4 py-3 text-center', s.cls)}>
-                        <p className="text-2xl font-bold">{s.value}</p>
-                        <p className="text-xs font-medium">{s.label}</p>
+                    <div key={s.label} className={`rounded-xl bg-gradient-to-br ${s.gradient} p-4 text-center text-white shadow-sm`}>
+                        <p className="text-2xl font-extrabold">{s.value}</p>
+                        <p className="text-xs font-medium text-white/70">{s.label}</p>
                     </div>
                 ))}
             </div>
 
             {/* Machine grid */}
             {machines.length === 0 ? (
-                <div className="text-center py-16 bg-white rounded-xl border border-gray-100">
-                    <CpuChipIcon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                    <h3 className="text-lg font-medium text-gray-900">No machines registered</h3>
+                <div className="card empty-state animate-fade-in-up">
+                    <CpuChipIcon className="empty-state-icon" />
+                    <h3 className="text-lg font-bold text-gray-900">No machines registered</h3>
                     <p className="text-gray-500 text-sm mt-1">Add your first machine to get started with remote control.</p>
                     <button
                         onClick={() => setShowAddModal(true)}
-                        className="mt-4 inline-flex items-center px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-medium hover:bg-green-700"
+                        className="mt-4 btn-primary inline-flex items-center gap-1.5"
                     >
-                        <PlusIcon className="w-4 h-4 mr-1.5" />
+                        <PlusIcon className="w-4 h-4" />
                         Add Machine
                     </button>
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5 animate-fade-in-up stagger-2">
                     {machines.map((machine) => (
                         <MachineCard
                             key={machine.id}
