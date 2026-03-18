@@ -1,0 +1,73 @@
+{
+  "name": "Multi-Page Data Scraper",
+  "description": "Navigate through paginated content, extract data, handle dynamic loading",
+  "variables": {
+    "baseUrl": "https://example.com",
+    "maxPages": "5",
+    "collectedData": []
+  },
+  "onError": "continue",
+  "maxRetries": 2,
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "{{baseUrl}}/products"
+    },
+    {
+      "action": "screenshot",
+      "name": "scrape_start"
+    },
+    {
+      "action": "extractAll",
+      "selector": ".product-card .product-name",
+      "variable": "productNames"
+    },
+    {
+      "action": "extractAll",
+      "selector": ".product-card .product-price",
+      "variable": "productPrices"
+    },
+    {
+      "action": "log",
+      "message": "Found {{productNames}} products on page 1"
+    },
+    {
+      "action": "repeat",
+      "count": 4,
+      "steps": [
+        {
+          "action": "click",
+          "selector": ".pagination .next, a[rel='next'], text=Next",
+          "label": "next-page-button"
+        },
+        {
+          "action": "waitForSelector",
+          "selector": ".product-card",
+          "state": "visible",
+          "timeout": 5000
+        },
+        {
+          "action": "extractAll",
+          "selector": ".product-card .product-name",
+          "variable": "pageProducts"
+        },
+        {
+          "action": "screenshot",
+          "name": "scrape_page_{{_iteration}}"
+        },
+        {
+          "action": "log",
+          "message": "Page {{_iteration}}: found products"
+        }
+      ]
+    },
+    {
+      "action": "screenshot",
+      "name": "scrape_complete"
+    },
+    {
+      "action": "log",
+      "message": "Scraping complete!"
+    }
+  ]
+}

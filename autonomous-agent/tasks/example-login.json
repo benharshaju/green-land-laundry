@@ -1,0 +1,86 @@
+{
+  "name": "Login & Extract Dashboard Data",
+  "description": "Navigate to app, log in, extract dashboard metrics, take screenshots",
+  "variables": {
+    "baseUrl": "https://example.com",
+    "username": "admin",
+    "password": "password123"
+  },
+  "onError": "continue",
+  "maxRetries": 3,
+  "steps": [
+    {
+      "action": "log",
+      "message": "Starting login automation..."
+    },
+    {
+      "action": "navigate",
+      "url": "{{baseUrl}}/login",
+      "waitUntil": "networkidle"
+    },
+    {
+      "action": "screenshot",
+      "name": "01_login_page"
+    },
+    {
+      "action": "type",
+      "selector": "#username, [name='email'], input[type='email']",
+      "label": "username-field",
+      "text": "{{username}}"
+    },
+    {
+      "action": "type",
+      "selector": "#password, [name='password'], input[type='password']",
+      "label": "password-field",
+      "text": "{{password}}"
+    },
+    {
+      "action": "click",
+      "selector": "button[type='submit'], #login-btn, text=Sign In, text=Log In",
+      "label": "login-button"
+    },
+    {
+      "action": "waitForNavigation",
+      "state": "networkidle"
+    },
+    {
+      "action": "screenshot",
+      "name": "02_after_login"
+    },
+    {
+      "action": "extract",
+      "selector": ".welcome-message, .user-greeting, h1",
+      "label": "welcome-text",
+      "variable": "welcomeMessage"
+    },
+    {
+      "action": "assert",
+      "variable": "welcomeMessage",
+      "truthy": true
+    },
+    {
+      "action": "log",
+      "message": "Login successful! Welcome: {{welcomeMessage}}"
+    },
+    {
+      "action": "extract",
+      "selector": ".dashboard-stat:nth-child(1), .metric-value:first-child",
+      "label": "primary-metric",
+      "variable": "primaryMetric"
+    },
+    {
+      "action": "extract",
+      "selector": ".dashboard-stat:nth-child(2), .metric-value:nth-child(2)",
+      "label": "secondary-metric",
+      "variable": "secondaryMetric"
+    },
+    {
+      "action": "screenshot",
+      "name": "03_dashboard"
+    },
+    {
+      "action": "log",
+      "message": "Extracted metrics: {{primaryMetric}}, {{secondaryMetric}}"
+    }
+  ]
+}
