@@ -54,21 +54,28 @@ jobs:
             echo "Web root: $SITE_DIR"
             ls -la "$SITE_DIR/" 2>/dev/null || true
 
-            # ── Clone or update repo ─────────────────────────────────
-            REPO_DIR="$HOME/green-land-laundry"
+            # ── Clone or update repo directly into web root ────────────
+            # On Hostinger shared hosting, PHP open_basedir prevents
+            # accessing files outside public_html. So we MUST put
+            # the entire Laravel app inside the web root.
+            REPO_DIR="$SITE_DIR"
             BRANCH="claude/connect-remote-control-cfpwb"
 
             if [ -d "$REPO_DIR/.git" ]; then
-              echo "=== Updating existing repo ==="
+              echo "=== Updating existing repo in web root ==="
               cd "$REPO_DIR"
               git fetch origin "$BRANCH"
               git checkout "$BRANCH"
               git reset --hard "origin/$BRANCH"
             else
-              echo "=== Fresh clone ==="
-              rm -rf "$REPO_DIR" 2>/dev/null || true
-              git clone -b "$BRANCH" https://github.com/benharshaju/green-land-laundry.git "$REPO_DIR"
-              cd "$REPO_DIR"
+              echo "=== Fresh clone into web root ==="
+              # Save any existing content
+              mkdir -p "$HOME/backups"
+              tar czf "$HOME/backups/pre-deploy-$(date +%Y%m%d%H%M%S).tar.gz" -C "$SITE_DIR" . 2>/dev/null || true
+              # Clear and clone
+              find "$SITE_DIR" -mindepth 1 -delete 2>/dev/null || true
+              git clone -b "$BRANCH" https://github.com/benharshaju/green-land-laundry.git "$SITE_DIR"
+              cd "$SITE_DIR"
             fi
 
             echo "=== Installing PHP dependencies ==="
@@ -112,66 +119,21 @@ jobs:
             chmod -R 755 storage bootstrap/cache 2>/dev/null || true
             chmod -R 775 storage 2>/dev/null || true
 
-            echo "=== Linking web root to Laravel public ==="
-            # Hostinger serves from public_html/. Laravel entry is public/.
-            # Best approach: make public_html/ contain Laravel's public/ content,
-            # and put the rest of the app one level up.
-
-            if [ "$SITE_DIR" != "$REPO_DIR" ]; then
-              echo "Web root ($SITE_DIR) differs from repo ($REPO_DIR)"
-
-              # Back up existing web root
-              mkdir -p "$HOME/backups"
-              tar czf "$HOME/backups/pre-deploy-$(date +%Y%m%d%H%M%S).tar.gz" -C "$SITE_DIR" . 2>/dev/null || true
-
-              # Clear web root
-              find "$SITE_DIR" -mindepth 1 -delete 2>/dev/null || true
-
-              # Copy Laravel's public/ contents into web root
-              cp -a "$REPO_DIR/public/." "$SITE_DIR/"
-
-              # Write a new index.php that points to the repo directory
-              cat > "$SITE_DIR/index.php" << PHPEOF
-<?php
-
-use Illuminate\Contracts\Http\Kernel;
-use Illuminate\Http\Request;
-
-define('LARAVEL_START', microtime(true));
-
-// Maintenance mode
-if (file_exists(\$maintenance = '$REPO_DIR/storage/framework/maintenance.php')) {
-    require \$maintenance;
-}
-
-// Autoloader
-require '$REPO_DIR/vendor/autoload.php';
-
-// Bootstrap
-\$app = require_once '$REPO_DIR/bootstrap/app.php';
-
-\$kernel = \$app->make(Kernel::class);
-
-\$response = \$kernel->handle(
-    \$request = Request::capture()
-)->send();
-
-\$kernel->terminate(\$request, \$response);
-PHPEOF
-
-              echo "Copied public/ to web root and wrote index.php"
-              echo "--- index.php ---"
-              cat "$SITE_DIR/index.php"
-              echo "---"
-            else
-              echo "Web root IS the repo dir — using root .htaccess"
-              cat > "$REPO_DIR/.htaccess" << 'HTEOF'
+            echo "=== Setting up .htaccess for Laravel ==="
+            # Since the entire repo is in public_html/, we need a root
+            # .htaccess to route all requests to public/index.php
+            cat > "$REPO_DIR/.htaccess" << 'HTEOF'
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 HTEOF
-            fi
+            echo "Root .htaccess created"
+            echo "--- Verifying structure ---"
+            ls -la "$REPO_DIR/.htaccess"
+            ls -la "$REPO_DIR/public/index.php"
+            ls -la "$REPO_DIR/public/.htaccess"
+            ls -la "$REPO_DIR/public/build/manifest.json" 2>/dev/null || echo "No manifest"
 
             echo "=== Database setup ==="
             cd "$REPO_DIR"
