@@ -6,7 +6,11 @@
     <title>Login — Green Land Laundry</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    @vite(['resources/css/app.css'])
+    @if(file_exists(public_path('build/manifest.json')))
+        @vite(['resources/css/app.css'])
+    @else
+        <link href="{{ asset('build/assets/app-73fcfc94.css') }}" rel="stylesheet">
+    @endif
 </head>
 <body class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
     <!-- Animated gradient background -->

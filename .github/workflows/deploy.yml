@@ -113,62 +113,54 @@ jobs:
             chmod -R 775 storage 2>/dev/null || true
 
             echo "=== Linking web root to Laravel public ==="
-            # Strategy 1: If web root is a directory we can replace, symlink it
-            # Strategy 2: Copy public content + create root .htaccess
+            # Hostinger serves from public_html/. Laravel entry is public/.
+            # Best approach: make public_html/ contain Laravel's public/ content,
+            # and put the rest of the app one level up.
 
-            # First, make sure the root .htaccess exists in repo
-            cat > .htaccess << 'HTEOF'
+            if [ "$SITE_DIR" != "$REPO_DIR" ]; then
+              echo "Web root ($SITE_DIR) differs from repo ($REPO_DIR)"
+
+              # Back up existing web root
+              mkdir -p "$HOME/backups"
+              tar czf "$HOME/backups/pre-deploy-$(date +%Y%m%d%H%M%S).tar.gz" -C "$SITE_DIR" . 2>/dev/null || true
+
+              # Clear web root
+              find "$SITE_DIR" -mindepth 1 -delete 2>/dev/null || true
+
+              # Copy Laravel's public/ contents into web root
+              cp -a "$REPO_DIR/public/." "$SITE_DIR/"
+
+              # Fix index.php to point to the app directory
+              # Change the paths in index.php to point to $REPO_DIR
+              sed -i "s|__DIR__.'/../vendor/autoload.php'|'$REPO_DIR/vendor/autoload.php'|" "$SITE_DIR/index.php"
+              sed -i "s|__DIR__.'/../bootstrap/app.php'|'$REPO_DIR/bootstrap/app.php'|" "$SITE_DIR/index.php"
+              # Also handle alternate quote style
+              sed -i "s|__DIR__ . '/../vendor/autoload.php'|'$REPO_DIR/vendor/autoload.php'|" "$SITE_DIR/index.php"
+              sed -i "s|__DIR__ . '/../bootstrap/app.php'|'$REPO_DIR/bootstrap/app.php'|" "$SITE_DIR/index.php"
+              sed -i "s|realpath(__DIR__.'/../')|'$REPO_DIR'|" "$SITE_DIR/index.php"
+              sed -i "s|__DIR__.'/..'|'$REPO_DIR'|" "$SITE_DIR/index.php"
+
+              echo "Copied public/ to web root and patched index.php"
+              echo "--- index.php ---"
+              cat "$SITE_DIR/index.php"
+              echo "---"
+            else
+              echo "Web root IS the repo dir — using root .htaccess"
+              cat > "$REPO_DIR/.htaccess" << 'HTEOF'
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 HTEOF
-
-            # If web root != repo dir, we need to link them
-            if [ "$SITE_DIR" != "$REPO_DIR" ]; then
-              echo "Web root ($SITE_DIR) differs from repo ($REPO_DIR)"
-
-              # Try symlinking approach (most reliable)
-              if [ -L "$SITE_DIR" ]; then
-                rm "$SITE_DIR"
-                ln -s "$REPO_DIR" "$SITE_DIR"
-                echo "Updated symlink: $SITE_DIR -> $REPO_DIR"
-              else
-                # Can't symlink over a real directory on shared hosting
-                # Instead, create a minimal .htaccess + index.php bridge
-                echo "Creating bridge from web root to repo..."
-
-                # Back up any existing content
-                mkdir -p "$HOME/backups"
-                tar czf "$HOME/backups/pre-deploy-$(date +%Y%m%d%H%M%S).tar.gz" -C "$SITE_DIR" . 2>/dev/null || true
-
-                # Clear web root and populate
-                find "$SITE_DIR" -mindepth 1 -delete 2>/dev/null || true
-
-                # Option A: Copy everything (works on all shared hosts)
-                cp -a "$REPO_DIR/." "$SITE_DIR/" 2>/dev/null || {
-                  # Option B: If cp fails (disk quota), create bridge files
-                  cat > "$SITE_DIR/.htaccess" << 'BRIDGE'
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^(.*)$ public/$1 [L]
-</IfModule>
-BRIDGE
-                  cat > "$SITE_DIR/index.php" << PHPBRIDGE
-<?php
-require __DIR__ . '/../green-land-laundry/public/index.php';
-PHPBRIDGE
-                  echo "Created bridge index.php"
-                }
-              fi
             fi
 
             echo "=== Database setup ==="
-            cd "$SITE_DIR" 2>/dev/null || cd "$REPO_DIR"
+            cd "$REPO_DIR"
             php artisan migrate --force 2>&1 || echo "DB migration skipped — configure DB in .env"
             php artisan db:seed --force 2>&1 || echo "DB seed skipped"
 
             echo "=== Optimizing Laravel ==="
+            cd "$REPO_DIR"
             php artisan config:cache 2>/dev/null || php artisan config:clear
             php artisan route:cache 2>/dev/null || php artisan route:clear
             php artisan view:cache 2>/dev/null || true
