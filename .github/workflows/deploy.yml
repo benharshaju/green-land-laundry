@@ -116,6 +116,18 @@ jobs:
             chmod -R 755 storage bootstrap/cache 2>/dev/null || true
             chmod -R 775 storage 2>/dev/null || true
 
+            echo "=== Ensuring .htaccess for Hostinger ==="
+            # Root .htaccess to route everything to public/
+            if [ ! -f .htaccess ] || ! grep -q 'public/' .htaccess; then
+              cat > .htaccess << 'HTEOF'
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+HTEOF
+              echo "Created root .htaccess"
+            fi
+
             echo "=== Database setup ==="
             # Try to run migrations (will fail if DB not configured, that's ok)
             php artisan migrate --force 2>&1 || echo "DB migration skipped - configure DB in .env first"
