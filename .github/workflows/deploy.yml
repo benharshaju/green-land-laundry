@@ -122,12 +122,7 @@ jobs:
             echo "=== Setting up .htaccess for Laravel ==="
             # Since the entire repo is in public_html/, we need a root
             # .htaccess to route all requests to public/index.php
-            cat > "$REPO_DIR/.htaccess" << 'HTEOF'
-<IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteRule ^(.*)$ public/$1 [L]
-</IfModule>
-HTEOF
+            printf '%s\n' '<IfModule mod_rewrite.c>' '    RewriteEngine On' '    RewriteRule ^(.*)$ public/$1 [L]' '</IfModule>' > "$REPO_DIR/.htaccess"
             echo "Root .htaccess created"
             echo "--- Verifying structure ---"
             ls -la "$REPO_DIR/.htaccess"
