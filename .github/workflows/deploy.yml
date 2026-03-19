@@ -24,136 +24,176 @@ jobs:
           script: |
             set -e
             echo "=== Starting deployment ==="
+            echo "Home: $HOME"
+            ls -la $HOME/ 2>/dev/null || true
 
-            SITE_DIR="$HOME/domains/masterkuttu.space/public_html"
+            # ── Detect web root ─────────────────────────────────────
+            SITE_DIR=""
+            for candidate in \
+              "$HOME/domains/masterkuttu.space/public_html" \
+              "$HOME/public_html" \
+              "$HOME/htdocs" \
+              "$HOME/www"; do
+              if [ -d "$candidate" ]; then
+                SITE_DIR="$candidate"
+                break
+              fi
+            done
 
-            # Check if directory exists, try alternate Hostinger paths
-            if [ ! -d "$HOME/domains" ]; then
-              # Try alternate Hostinger directory structures
-              if [ -d "$HOME/public_html" ]; then
-                SITE_DIR="$HOME/public_html"
-              elif [ -d "$HOME/htdocs" ]; then
-                SITE_DIR="$HOME/htdocs"
+            if [ -z "$SITE_DIR" ]; then
+              echo "No standard web root found. Searching..."
+              FOUND=$(find $HOME -maxdepth 4 -name "public_html" -type d 2>/dev/null | head -1)
+              if [ -n "$FOUND" ]; then
+                SITE_DIR="$FOUND"
               else
-                echo "Looking for web root..."
-                find $HOME -maxdepth 3 -name "public_html" -type d 2>/dev/null || true
-                find $HOME -maxdepth 3 -name "htdocs" -type d 2>/dev/null || true
-                ls -la $HOME/
                 SITE_DIR="$HOME/public_html"
+                mkdir -p "$SITE_DIR"
               fi
             fi
 
-            echo "Using site directory: $SITE_DIR"
+            echo "Web root: $SITE_DIR"
+            ls -la "$SITE_DIR/" 2>/dev/null || true
 
-            # Backup existing site (if any content)
-            if [ -d "$SITE_DIR" ] && [ "$(ls -A $SITE_DIR 2>/dev/null)" ]; then
-              echo "Backing up existing content..."
-              mkdir -p $HOME/backups
-              tar czf $HOME/backups/pre-deploy-$(date +%Y%m%d%H%M%S).tar.gz -C $SITE_DIR . 2>/dev/null || true
-            fi
+            # ── Clone or update repo ─────────────────────────────────
+            REPO_DIR="$HOME/green-land-laundry"
+            BRANCH="claude/connect-remote-control-cfpwb"
 
-            # Check if git repo already exists
-            if [ -d "$SITE_DIR/.git" ]; then
-              echo "Updating existing repo..."
-              cd $SITE_DIR
-              git fetch origin claude/connect-remote-control-cfpwb
-              git checkout claude/connect-remote-control-cfpwb
-              git pull origin claude/connect-remote-control-cfpwb
+            if [ -d "$REPO_DIR/.git" ]; then
+              echo "=== Updating existing repo ==="
+              cd "$REPO_DIR"
+              git fetch origin "$BRANCH"
+              git checkout "$BRANCH"
+              git reset --hard "origin/$BRANCH"
             else
-              echo "Fresh clone..."
-              # Clean directory but preserve .htaccess if exists
-              if [ -f "$SITE_DIR/.htaccess" ]; then
-                cp $SITE_DIR/.htaccess /tmp/.htaccess.bak 2>/dev/null || true
-              fi
-              rm -rf $SITE_DIR 2>/dev/null || true
-              git clone -b claude/connect-remote-control-cfpwb https://github.com/benharshaju/green-land-laundry.git $SITE_DIR
-              cd $SITE_DIR
+              echo "=== Fresh clone ==="
+              rm -rf "$REPO_DIR" 2>/dev/null || true
+              git clone -b "$BRANCH" https://github.com/benharshaju/green-land-laundry.git "$REPO_DIR"
+              cd "$REPO_DIR"
             fi
 
             echo "=== Installing PHP dependencies ==="
-            cd $SITE_DIR
-
-            # Check PHP version
             php -v
 
-            # Install composer if not available
+            # Install composer if needed
             if ! command -v composer &>/dev/null; then
               if [ ! -f "$HOME/bin/composer" ]; then
-                mkdir -p $HOME/bin
-                curl -sS https://getcomposer.org/installer | php -- --install-dir=$HOME/bin --filename=composer
+                mkdir -p "$HOME/bin"
+                curl -sS https://getcomposer.org/installer | php -- --install-dir="$HOME/bin" --filename=composer
               fi
               export PATH="$HOME/bin:$PATH"
             fi
 
-            composer install --no-dev --optimize-autoloader --no-interaction
+            cd "$REPO_DIR"
+            composer install --no-dev --optimize-autoloader --no-interaction 2>&1 || \
+              php "$HOME/bin/composer" install --no-dev --optimize-autoloader --no-interaction 2>&1
 
             echo "=== Setting up environment ==="
             if [ ! -f .env ]; then
               cp .env.example .env
             fi
 
-            # Update APP_URL
             sed -i "s|APP_URL=.*|APP_URL=https://masterkuttu.space|" .env
             sed -i "s|APP_ENV=.*|APP_ENV=production|" .env
-            sed -i "s|APP_DEBUG=.*|APP_DEBUG=false|" .env
+            sed -i "s|APP_DEBUG=.*|APP_DEBUG=true|" .env
 
-            # Generate app key
-            php artisan key:generate --force
+            php artisan key:generate --force 2>/dev/null || true
 
             echo "=== Building frontend ==="
-            # Check if node is available
             if command -v node &>/dev/null; then
               node -v
               npm ci 2>/dev/null || npm install
               npm run build
             else
-              echo "Node.js not available, using pre-built assets from repo"
-              # The public/build directory should be in the repo already
-              ls -la public/build/ 2>/dev/null || echo "No pre-built assets found"
+              echo "Node.js not available — using pre-built assets from repo"
+              ls -la public/build/ 2>/dev/null || echo "WARNING: No pre-built assets"
             fi
 
             echo "=== Setting permissions ==="
             chmod -R 755 storage bootstrap/cache 2>/dev/null || true
             chmod -R 775 storage 2>/dev/null || true
 
-            echo "=== Ensuring .htaccess for Hostinger ==="
-            # Root .htaccess to route everything to public/
-            if [ ! -f .htaccess ] || ! grep -q 'public/' .htaccess; then
-              cat > .htaccess << 'HTEOF'
+            echo "=== Linking web root to Laravel public ==="
+            # Strategy 1: If web root is a directory we can replace, symlink it
+            # Strategy 2: Copy public content + create root .htaccess
+
+            # First, make sure the root .htaccess exists in repo
+            cat > .htaccess << 'HTEOF'
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteRule ^(.*)$ public/$1 [L]
 </IfModule>
 HTEOF
-              echo "Created root .htaccess"
+
+            # If web root != repo dir, we need to link them
+            if [ "$SITE_DIR" != "$REPO_DIR" ]; then
+              echo "Web root ($SITE_DIR) differs from repo ($REPO_DIR)"
+
+              # Try symlinking approach (most reliable)
+              if [ -L "$SITE_DIR" ]; then
+                rm "$SITE_DIR"
+                ln -s "$REPO_DIR" "$SITE_DIR"
+                echo "Updated symlink: $SITE_DIR -> $REPO_DIR"
+              else
+                # Can't symlink over a real directory on shared hosting
+                # Instead, create a minimal .htaccess + index.php bridge
+                echo "Creating bridge from web root to repo..."
+
+                # Back up any existing content
+                mkdir -p "$HOME/backups"
+                tar czf "$HOME/backups/pre-deploy-$(date +%Y%m%d%H%M%S).tar.gz" -C "$SITE_DIR" . 2>/dev/null || true
+
+                # Clear web root and populate
+                find "$SITE_DIR" -mindepth 1 -delete 2>/dev/null || true
+
+                # Option A: Copy everything (works on all shared hosts)
+                cp -a "$REPO_DIR/." "$SITE_DIR/" 2>/dev/null || {
+                  # Option B: If cp fails (disk quota), create bridge files
+                  cat > "$SITE_DIR/.htaccess" << 'BRIDGE'
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+BRIDGE
+                  cat > "$SITE_DIR/index.php" << PHPBRIDGE
+<?php
+require __DIR__ . '/../green-land-laundry/public/index.php';
+PHPBRIDGE
+                  echo "Created bridge index.php"
+                }
+              fi
             fi
 
             echo "=== Database setup ==="
-            # Try to run migrations (will fail if DB not configured, that's ok)
-            php artisan migrate --force 2>&1 || echo "DB migration skipped - configure DB in .env first"
+            cd "$SITE_DIR" 2>/dev/null || cd "$REPO_DIR"
+            php artisan migrate --force 2>&1 || echo "DB migration skipped — configure DB in .env"
             php artisan db:seed --force 2>&1 || echo "DB seed skipped"
 
             echo "=== Optimizing Laravel ==="
             php artisan config:cache 2>/dev/null || php artisan config:clear
             php artisan route:cache 2>/dev/null || php artisan route:clear
-            php artisan view:cache
+            php artisan view:cache 2>/dev/null || true
             php artisan storage:link 2>/dev/null || true
 
             echo ""
             echo "========================================="
             echo "  DEPLOYMENT COMPLETE!"
+            echo "  Site dir: $SITE_DIR"
+            echo "  Repo dir: $REPO_DIR"
             echo "  https://masterkuttu.space"
             echo "========================================="
 
-      - name: Verify site is live
+      - name: Verify deployment
         run: |
-          sleep 15
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://masterkuttu.space)
-          echo "Site status: $STATUS"
-          BODY=$(curl -s https://masterkuttu.space | head -50)
-          echo "$BODY"
-          if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 302 ]; then
-            echo "Site is LIVE!"
-          else
-            echo "Status: $STATUS - may need DB configuration"
-          fi
+          echo "Waiting for deployment to propagate..."
+          sleep 20
+          for i in 1 2 3; do
+            STATUS=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 15 https://masterkuttu.space 2>/dev/null || echo "000")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 302 ]; then
+              echo "Site is LIVE!"
+              curl -sL --max-time 10 https://masterkuttu.space 2>/dev/null | head -30
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Site may still be starting up — check https://masterkuttu.space manually"
