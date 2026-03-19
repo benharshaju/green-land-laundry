@@ -130,17 +130,36 @@ jobs:
               # Copy Laravel's public/ contents into web root
               cp -a "$REPO_DIR/public/." "$SITE_DIR/"
 
-              # Fix index.php to point to the app directory
-              # Change the paths in index.php to point to $REPO_DIR
-              sed -i "s|__DIR__.'/../vendor/autoload.php'|'$REPO_DIR/vendor/autoload.php'|" "$SITE_DIR/index.php"
-              sed -i "s|__DIR__.'/../bootstrap/app.php'|'$REPO_DIR/bootstrap/app.php'|" "$SITE_DIR/index.php"
-              # Also handle alternate quote style
-              sed -i "s|__DIR__ . '/../vendor/autoload.php'|'$REPO_DIR/vendor/autoload.php'|" "$SITE_DIR/index.php"
-              sed -i "s|__DIR__ . '/../bootstrap/app.php'|'$REPO_DIR/bootstrap/app.php'|" "$SITE_DIR/index.php"
-              sed -i "s|realpath(__DIR__.'/../')|'$REPO_DIR'|" "$SITE_DIR/index.php"
-              sed -i "s|__DIR__.'/..'|'$REPO_DIR'|" "$SITE_DIR/index.php"
+              # Write a new index.php that points to the repo directory
+              cat > "$SITE_DIR/index.php" << PHPEOF
+<?php
 
-              echo "Copied public/ to web root and patched index.php"
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Http\Request;
+
+define('LARAVEL_START', microtime(true));
+
+// Maintenance mode
+if (file_exists(\$maintenance = '$REPO_DIR/storage/framework/maintenance.php')) {
+    require \$maintenance;
+}
+
+// Autoloader
+require '$REPO_DIR/vendor/autoload.php';
+
+// Bootstrap
+\$app = require_once '$REPO_DIR/bootstrap/app.php';
+
+\$kernel = \$app->make(Kernel::class);
+
+\$response = \$kernel->handle(
+    \$request = Request::capture()
+)->send();
+
+\$kernel->terminate(\$request, \$response);
+PHPEOF
+
+              echo "Copied public/ to web root and wrote index.php"
               echo "--- index.php ---"
               cat "$SITE_DIR/index.php"
               echo "---"
