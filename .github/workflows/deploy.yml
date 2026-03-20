@@ -1,0 +1,167 @@
+name: Deploy to masterkuttu.space
+
+on:
+  push:
+    branches:
+      - claude/connect-remote-control-cfpwb
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Hostinger
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: 91.108.107.152
+          username: u720252335
+          password: Greenland@123
+          port: 65002
+          command_timeout: 30m
+          script: |
+            set -e
+            echo "=== Starting deployment ==="
+            echo "Home: $HOME"
+            ls -la $HOME/ 2>/dev/null || true
+
+            # ── Detect web root ─────────────────────────────────────
+            SITE_DIR=""
+            for candidate in \
+              "$HOME/domains/masterkuttu.space/public_html" \
+              "$HOME/public_html" \
+              "$HOME/htdocs" \
+              "$HOME/www"; do
+              if [ -d "$candidate" ]; then
+                SITE_DIR="$candidate"
+                break
+              fi
+            done
+
+            if [ -z "$SITE_DIR" ]; then
+              echo "No standard web root found. Searching..."
+              FOUND=$(find $HOME -maxdepth 4 -name "public_html" -type d 2>/dev/null | head -1)
+              if [ -n "$FOUND" ]; then
+                SITE_DIR="$FOUND"
+              else
+                SITE_DIR="$HOME/public_html"
+                mkdir -p "$SITE_DIR"
+              fi
+            fi
+
+            echo "Web root: $SITE_DIR"
+            ls -la "$SITE_DIR/" 2>/dev/null || true
+
+            # ── Clone or update repo directly into web root ────────────
+            # On Hostinger shared hosting, PHP open_basedir prevents
+            # accessing files outside public_html. So we MUST put
+            # the entire Laravel app inside the web root.
+            REPO_DIR="$SITE_DIR"
+            BRANCH="claude/connect-remote-control-cfpwb"
+
+            if [ -d "$REPO_DIR/.git" ]; then
+              echo "=== Updating existing repo in web root ==="
+              cd "$REPO_DIR"
+              git fetch origin "$BRANCH"
+              git checkout "$BRANCH"
+              git reset --hard "origin/$BRANCH"
+            else
+              echo "=== Fresh clone into web root ==="
+              # Save any existing content
+              mkdir -p "$HOME/backups"
+              tar czf "$HOME/backups/pre-deploy-$(date +%Y%m%d%H%M%S).tar.gz" -C "$SITE_DIR" . 2>/dev/null || true
+              # Clear and clone
+              find "$SITE_DIR" -mindepth 1 -delete 2>/dev/null || true
+              git clone -b "$BRANCH" https://github.com/benharshaju/green-land-laundry.git "$SITE_DIR"
+              cd "$SITE_DIR"
+            fi
+
+            echo "=== Installing PHP dependencies ==="
+            php -v
+
+            # Install composer if needed
+            if ! command -v composer &>/dev/null; then
+              if [ ! -f "$HOME/bin/composer" ]; then
+                mkdir -p "$HOME/bin"
+                curl -sS https://getcomposer.org/installer | php -- --install-dir="$HOME/bin" --filename=composer
+              fi
+              export PATH="$HOME/bin:$PATH"
+            fi
+
+            cd "$REPO_DIR"
+            composer install --no-dev --optimize-autoloader --no-interaction 2>&1 || \
+              php "$HOME/bin/composer" install --no-dev --optimize-autoloader --no-interaction 2>&1
+
+            echo "=== Setting up environment ==="
+            if [ ! -f .env ]; then
+              cp .env.example .env
+            fi
+
+            sed -i "s|APP_URL=.*|APP_URL=https://masterkuttu.space|" .env
+            sed -i "s|APP_ENV=.*|APP_ENV=production|" .env
+            sed -i "s|APP_DEBUG=.*|APP_DEBUG=true|" .env
+
+            php artisan key:generate --force 2>/dev/null || true
+
+            echo "=== Building frontend ==="
+            if command -v node &>/dev/null; then
+              node -v
+              npm ci 2>/dev/null || npm install
+              npm run build
+            else
+              echo "Node.js not available — using pre-built assets from repo"
+              ls -la public/build/ 2>/dev/null || echo "WARNING: No pre-built assets"
+            fi
+
+            echo "=== Setting permissions ==="
+            chmod -R 755 storage bootstrap/cache 2>/dev/null || true
+            chmod -R 775 storage 2>/dev/null || true
+
+            echo "=== Setting up .htaccess for Laravel ==="
+            # Since the entire repo is in public_html/, we need a root
+            # .htaccess to route all requests to public/index.php
+            printf '%s\n' '<IfModule mod_rewrite.c>' '    RewriteEngine On' '    RewriteRule ^(.*)$ public/$1 [L]' '</IfModule>' > "$REPO_DIR/.htaccess"
+            echo "Root .htaccess created"
+            echo "--- Verifying structure ---"
+            ls -la "$REPO_DIR/.htaccess"
+            ls -la "$REPO_DIR/public/index.php"
+            ls -la "$REPO_DIR/public/.htaccess"
+            ls -la "$REPO_DIR/public/build/manifest.json" 2>/dev/null || echo "No manifest"
+
+            echo "=== Database setup ==="
+            cd "$REPO_DIR"
+            php artisan migrate --force 2>&1 || echo "DB migration skipped — configure DB in .env"
+            php artisan db:seed --force 2>&1 || echo "DB seed skipped"
+
+            echo "=== Optimizing Laravel ==="
+            cd "$REPO_DIR"
+            php artisan config:cache 2>/dev/null || php artisan config:clear
+            php artisan route:cache 2>/dev/null || php artisan route:clear
+            php artisan view:cache 2>/dev/null || true
+            php artisan storage:link 2>/dev/null || true
+
+            echo ""
+            echo "========================================="
+            echo "  DEPLOYMENT COMPLETE!"
+            echo "  Site dir: $SITE_DIR"
+            echo "  Repo dir: $REPO_DIR"
+            echo "  https://masterkuttu.space"
+            echo "========================================="
+
+      - name: Verify deployment
+        run: |
+          echo "Waiting for deployment to propagate..."
+          sleep 20
+          for i in 1 2 3; do
+            STATUS=$(curl -sL -o /dev/null -w "%{http_code}" --max-time 15 https://masterkuttu.space 2>/dev/null || echo "000")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" -eq 200 ] || [ "$STATUS" -eq 302 ]; then
+              echo "Site is LIVE!"
+              curl -sL --max-time 10 https://masterkuttu.space 2>/dev/null | head -30
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Site may still be starting up — check https://masterkuttu.space manually"

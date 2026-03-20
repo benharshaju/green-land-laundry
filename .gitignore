@@ -3,7 +3,7 @@
 /public/storage
 /storage/*.key
 /storage/logs/*.log
-/vendor
+# /vendor  # Included for Docker deployment (no composer on server)
 .env
 .env.backup
 .env.production
